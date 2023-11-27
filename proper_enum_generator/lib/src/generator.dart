@@ -23,7 +23,7 @@ final class ProperEnumGenerator extends GeneratorForAnnotation<ProperEnum> {
       throw InvalidGenerationSourceError("Enum cannot have more than 1 type parameter.", element: element);
     }
     bool hasTypeParameter = element.typeParameters.length == 1;
-    final subClasses = <(String, DartType?)>{};
+    final subClassesToBuild = <(String, DartType?)>{};
     for (final (index, field) in element.fields.indexed) {
       // Last field of an enum is value
       if (index == element.fields.length - 1) {
@@ -46,21 +46,20 @@ final class ProperEnumGenerator extends GeneratorForAnnotation<ProperEnum> {
           innerType = fieldTypes[0];
         }
       }
-      subClasses.add((className, innerType));
+      subClassesToBuild.add((className, innerType));
     }
 
-    final classes = <Class>[];
+    final subClassBuilders = <ClassBuilder>[];
 
-    final baseClass = Class((c) => c
+    final baseClassBuilder = ClassBuilder()
       ..name = element.name.nonPrivate.pascal
-      ..sealed = true);
-    classes.add(baseClass);
+      ..sealed = true;
 
-    for (final (name, innerType) in subClasses) {
+    for (final (name, innerType) in subClassesToBuild) {
       final classBuilder = ClassBuilder()
         ..modifier = ClassModifier.final$
         ..name = name
-        ..implements = (ListBuilder()..add(refer(baseClass.name)));
+        ..implements = (ListBuilder()..add(refer(baseClassBuilder.name!)));
       if (innerType != null) {
         final innerTypeReference = refer(innerType.toString());
         final fieldBuilder = FieldBuilder()
@@ -76,12 +75,53 @@ final class ProperEnumGenerator extends GeneratorForAnnotation<ProperEnum> {
               ..toThis = true))));
         classBuilder.constructors = ListBuilder()..add(constructor);
       }
-      classes.add(classBuilder.build());
+      subClassBuilders.add(classBuilder);
     }
+
+    for (final subClass in subClassBuilders) {
+      baseClassBuilder.methods.add(createMapMethod(baseClassBuilder.name!, subClass.name!, false, true));
+    }
+    for (final subClassTarget in subClassBuilders) {
+      for (final subClass in subClassBuilders) {
+        if (subClassTarget == subClass) {
+          subClassTarget.methods.add(createMapMethod(baseClassBuilder.name!, subClass.name!, true, false));
+        } else {
+          subClassTarget.methods.add(createMapMethod(baseClassBuilder.name!, subClass.name!, false, false));
+        }
+      }
+    }
+
     final DartEmitter emitter = DartEmitter(useNullSafetySyntax: true);
-    final fileString = classes.map((e) => e.accept(emitter).toString()).join("\n");
+    final fileString =
+        [baseClassBuilder, ...subClassBuilders].map((e) => e.build().accept(emitter).toString()).join("\n");
     return DartFormatter().format(fileString);
   }
+
+  Method createMapMethod(String baseType, String thisType, bool isCorrectImpl, bool isInterface) {
+    final String inner = isCorrectImpl ? "return ${thisType.camel}Fn(this);" : "return this;";
+    // String code = """
+    //   $baseType map$thisType<T>(T Function($thisType ${thisType.pascal}) ${thisType.pascal}Fn){
+    //      $inner
+    //   }
+    // """;
+    final innerCode = Code(inner);
+    final builder = MethodBuilder()
+      ..name = "map$thisType"
+      ..returns = refer(baseType)
+      ..requiredParameters = (ListBuilder()
+        ..add(Parameter((p) => p
+          ..name = "${thisType.camel}Fn"
+          ..type = refer("$baseType Function($thisType ${thisType.camel})"))));
+    if (!isInterface) {
+      builder.body = innerCode;
+      builder.annotations.add(CodeExpression(Code("override")));
+    }
+    return builder.build();
+  }
+}
+
+extension CamelCase on String {
+  String get camel => this[0].toLowerCase() + substring(1);
 }
 
 class ProperEnumLogicError extends Error {
