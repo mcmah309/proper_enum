@@ -1,0 +1,14 @@
+Add methods
+    map<Name>
+    map<Name>Or
+    map<Name>OrElse
+    match
+    unwrap<Name>
+    unwrap<Name>Or
+    unwrap<Name>OrElse
+    expect<Name>
+    is<Name>
+    is<Name>And
+
+Add factories to base
+Add any comments to the generated classes
