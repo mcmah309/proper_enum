@@ -10,13 +10,4 @@ import 'generator.dart';
 Builder properEnumGeneratorFactory(BuilderOptions options) => PartBuilder(
       [const ProperEnumGenerator()],
       '.proper_enum.dart',
-      header: options.config['header'],
-      formatOutput: PartBuilder([const ProperEnumGenerator()], '.proper_enum.dart').formatOutput,
-      options: !options.config.containsKey('build_extensions')
-          ? options.overrideWith(
-              BuilderOptions({
-                'build_extensions': {'.dart': '.proper_enum.dart'},
-              }),
-            )
-          : options,
     );
