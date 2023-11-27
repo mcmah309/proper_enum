@@ -1,0 +1,10 @@
+# https://github.com/dart-lang/build/blob/master/build_config/README.md
+# https://github.com/dart-lang/build/blob/master/docs/build_yaml_format.md#autoapply
+builders:
+  proper_enum_generator:
+    target: ":proper_enum_generator"
+    import: "package:proper_enum_generator/proper_enum_generator.dart"
+    builder_factories: [ "properEnumGeneratorFactory" ]
+    build_extensions: { ".dart": [ ".proper_enum.dart" ] }
+    auto_apply: dependents
+    build_to: source
