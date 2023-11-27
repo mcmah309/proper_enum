@@ -16,6 +16,9 @@ final class ProperEnumGenerator extends GeneratorForAnnotation<ProperEnum> {
     if (element is! EnumElement) {
       throw InvalidGenerationSourceError("Generator cannot generator for target.", element: element);
     }
+    if (!element.name.startsWith("_")) {
+      throw InvalidGenerationSourceError("Enum name must start with '_'.", element: element);
+    }
     if (element.typeParameters.length > 1) {
       throw InvalidGenerationSourceError("Enum cannot have more than 1 type parameter.", element: element);
     }
